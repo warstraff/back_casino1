@@ -4,7 +4,7 @@ import cors from 'cors';
 
 const app = express();
 app.use(express.json());
-app.use(cors());
+app.use(cors({ origin: '*' }));
 
 const messages = new Map(); // IP -> array of messages
 const replies = new Map(); // IP -> array of replies
