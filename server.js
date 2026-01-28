@@ -10,6 +10,10 @@ const messages = new Map(); // IP -> array of messages
 const replies = new Map(); // IP -> array of replies
 let lastUpdateId = 0;
 
+app.get('/', (req, res) => {
+  res.send('Backend is running');
+});
+
 const botToken = process.env.BOT_TOKEN || "8489048462:AAHtnirplnr_vqt2Wy4kV4C3xNiQgNTcrqs";
 const chatId = process.env.CHAT_ID || "-1003718222394";
 
@@ -18,11 +22,14 @@ setInterval(async () => {
   try {
     const response = await fetch(`https://api.telegram.org/bot${botToken}/getUpdates?offset=${lastUpdateId + 1}`);
     const data = await response.json();
+    console.log(`Polling updates: ok=${data.ok}, result length=${data.result?.length || 0}`);
     if (data.ok && data.result.length > 0) {
       for (const update of data.result) {
         lastUpdateId = update.update_id;
+        console.log(`Update ${update.update_id}: message=${!!update.message}, chat_id=${update.message?.chat?.id}`);
         if (update.message && update.message.chat.id.toString() === chatId) {
           const message = update.message;
+          console.log(`Message in chat: text="${message.text}", reply_to=${!!message.reply_to_message}`);
           if (message.reply_to_message && message.reply_to_message.text) {
             const repliedText = message.reply_to_message.text;
             console.log(`Replied text: "${repliedText}"`);
@@ -36,9 +43,13 @@ setInterval(async () => {
               replies.get(userId).push({ text: reply, timestamp: new Date(), from: 'admin' });
               console.log(`Reply to ${userId}: ${reply}, replies size: ${replies.size}, has userId: ${replies.has(userId)}, replies for userId: ${replies.get(userId)?.length || 0}`);
             }
+          } else if (!message.reply_to_message) {
+            console.log(`New message from admin: "${message.text}" - not processed as reply`);
           }
         }
       }
+    } else if (!data.ok) {
+      console.error(`Telegram API error: ${data.description}`);
     }
   } catch (error) {
     console.error("Error polling bot:", error);
@@ -76,6 +87,7 @@ app.post('/reply', (req, res) => {
   res.json({ success: true });
 });
 
-app.listen(3000, () => {
-  console.log('Server running on port 3000');
+const port = process.env.PORT || 3000;
+app.listen(port, () => {
+  console.log(`Server running on port ${port}`);
 });
